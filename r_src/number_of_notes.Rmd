@@ -1,0 +1,181 @@
+---
+title: "note_counts"
+output: html_document
+---
+
+```{r}
+pacman::p_load(tidyverse, lubridate, here, patchwork, ggforce, knitr, kableExtra)
+```
+
+
+```{r}
+file_dir <- "\\\\TSCLIENT\\P\\LASHA601\\documentLibrary\\lexical-dynamics-data\\note_counts_per_patient.csv"
+
+df = read_csv(file_dir) %>% 
+  rename(id = index, year = y) %>% 
+  mutate(year = as.Date(ISOdate(year, 1, 1)))
+
+td_df <- read_csv(here("data", "td_stats.csv")) %>% 
+  select(quarter, date, `Note type`, n_tokens_mean, n_tokens_std)
+
+n_tok_per_year <- read_csv(here("data", "n_tokens_per_year.csv")) %>% 
+  select(-readrecord.browser.HIDDEN_RESULTS_CONTENT_MESSAGE) %>% 
+  rename(year=index)
+```
+
+
+## Number of notes, sum tokens, and mean tokens by type
+```{r}
+
+# Total number of tokens per type
+n_tokens_by_type <-n_tok_per_year %>% 
+  pivot_longer(-year) %>% 
+  group_by(name) %>% 
+  summarise(tokens_per_type = sum(value)) %>% 
+  arrange(desc(tokens_per_type))
+
+n_notes_by_type <- df %>% 
+  select(-c(id, year)) %>%
+  pivot_longer(everything()) %>% 
+  drop_na() %>% 
+  group_by(name) %>% 
+  summarize(n_notes = sum(value)) %>% 
+  arrange(desc(n_notes))
+  
+tok_table <- n_tokens_by_type %>% 
+  left_join(n_notes_by_type) %>% 
+  mutate(mean_tokens_by_type = round(tokens_per_type / n_notes, 2)) %>% 
+  mutate(name  = case_when(
+    name == "Aftaler, Psykiatri" ~ "Appointments, Psychiatry",
+    name == "Aktuelt socialt, Psykiatri" ~ "Current social, Psychiatry",
+    name == "Aktuelt psykisk" ~ "Current mental state",
+    name == "Aktuelt somatisk, Psykiatri" ~ "Current somatic, Psychiatry",
+    name == "Journalnotat" ~ "Journal note",
+    name == "Konklusion" ~ "Conclusion",
+    name == "Kontaktårsag" ~ "Reason of contact",
+    name == "Medicin" ~ "Medication",
+    name == "Objektivt psykisk" ~ "Objective mental state",
+    name == "Objektivt, somatisk" ~ "Objective, somatic",
+    name == "Observation af patient, Psykiatri" ~ "Observation of patient, Psychiatry",
+    name == "Ordination" ~ "Ordination",
+    name == "Plan" ~ "Plan",
+    name == "Samtale med behandlingssigte" ~ "Conversation with treatment aim",
+    name == "Semistruktureret diagnostisk interview" ~ "Semi-structured diagnostic interview",
+    name == "Telefonkonsultation" ~ "Telephone consultation",
+    name == "Telefonnotat" ~ "Telephone note"
+  )) %>% 
+  relocate(name, n_notes) %>% 
+  arrange(desc(n_notes)) 
+
+totals <- tibble(name = "Total", n_notes = sum(tok_table$n_notes), tokens_per_type = sum(tok_table$tokens_per_type), sum(tok_table$mean_tokens_by_type))
+
+ 
+tok_table %>% 
+  bind_rows(totals) %>% 
+  rename(`Note type` = name, `Total tokens` = tokens_per_type, `Number of notes` = n_notes, `Mean tokens per note` = mean_tokens_by_type) %>%
+    write_csv("note_table.csv")
+
+
+```
+
+## Length of notes by type
+```{r}
+td_df %>% 
+  ggplot(aes(x=date, y = n_tokens_mean)) +
+  geom_line() +
+  facet_wrap(~`Note type`, scales="free_y")
+```
+
+
+
+## Number of notes by type per year
+```{r}
+df %>% 
+  select(-id) %>%
+  pivot_longer(-year) %>% 
+  drop_na() %>% 
+  group_by(year, name) %>% 
+  summarize(n = n()) %>% 
+  ggplot(aes(x=year, y=n)) +
+  geom_line() +
+  scale_x_date() + 
+  facet_wrap(~name, scales="free_y")
+  
+```
+
+## Number of notes by year
+```{r}
+df %>% 
+  select(-id) %>%
+  pivot_longer(-year) %>% 
+  drop_na() %>% 
+  group_by(year) %>% 
+  summarize(n = n()) %>% 
+  ggplot(aes(x=year, y=n)) +
+  geom_col() 
+```
+
+
+## Number of notes per patient per year
+```{r}
+df %>% 
+  pivot_longer(-c(year, id)) %>% 
+  group_by(id, year) %>% 
+  summarize(notes_per_patient_per_year = sum(value)) %>% 
+  drop_na() %>% 
+  ungroup() %>% 
+  group_by(year) %>% 
+  summarize(mean_notes_per_patient_per_year = mean(notes_per_patient_per_year),
+            median_notes_per_patient_per_year = median(notes_per_patient_per_year),
+            sd_notes_per_patient_per_year = sd(notes_per_patient_per_year))
+```
+
+
+## Notes per patient distribution
+```{r}
+df %>% 
+  pivot_longer(-c(id, year)) %>% 
+  group_by(id) %>% 
+  summarize(notes_per_patient = sum(value, na.rm=TRUE)) %>% 
+  ggplot(aes(x=notes_per_patient)) + 
+  geom_histogram(bins=500) +
+  facet_zoom(xlim = c(0, 500))
+
+
+df %>% 
+  pivot_longer(-c(id, year)) %>% 
+  group_by(id) %>% 
+  summarize(notes_per_patient = sum(value, na.rm=TRUE)) %>%
+  ggplot(aes(x=notes_per_patient)) +
+  geom_boxplot(width=0.5) +
+  facet_zoom(xlim = c(0, 500))
+
+```
+
+
+
+## Mean notes per patient 
+```{r}
+notes_per_patient <- df %>% 
+  pivot_longer(-c(id, year)) %>% 
+  group_by(id) %>% 
+  summarize(notes_per_patient = sum(value, na.rm=TRUE)) 
+
+summary(notes_per_patient$notes_per_patient)
+```
+
+## Total tokens
+```{r}
+n_tok_per_year %>% 
+  pivot_longer(-year) %>% 
+  summarise(total_tokens = sum(value))
+```
+
+## Total tokens per note type
+```{r}
+```
+
+
+
+
+
