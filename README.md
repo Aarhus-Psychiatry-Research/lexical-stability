@@ -12,6 +12,7 @@ Code for the paper "Lexical Stability of Psychiatric Clinical Notes from Electro
 
 
 ## Directory structure
+```
 ├── data/
 │   ├── entropy_prop.csv # novelty
 │   ├── keyword_counts.pkl # keyword counts
@@ -40,3 +41,4 @@ Code for the paper "Lexical Stability of Psychiatric Clinical Notes from Electro
 │       ├── __init__.py
 │       ├── infodynamics.py # code for calculating novelty
 │       └── utils.py # misc. utilities
+
