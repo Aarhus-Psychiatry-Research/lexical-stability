@@ -1,5 +1,5 @@
 # Lexical Stability
-Code for the paper "Lexical Stability of Psychiatric Clinical Notes from Electronic Health Records over a Decade". The raw data can not be shared, but aggregated data (keyword counts, descriptive statistics, novelty) can be under `data`. `r_src/changepoint_analysis.Rmd` can be run to recreate the analysis from the paper. 
+Code for the paper "Lexical Stability of Psychiatric Clinical Notes from Electronic Health Records over a Decade". The raw data can not be shared, but aggregated data (keyword counts, descriptive statistics, novelty) can be found under `data`. `r_src/changepoint_analysis.Rmd` can be run to recreate the analysis from the paper. 
 
 
 ## Pipeline
