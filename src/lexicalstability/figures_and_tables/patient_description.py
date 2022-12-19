@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from psycopmlutils.loaders.raw.sql_load import sql_load
 
-from utils.utils import table_to_docx
+from lexicalstability.utils.utils import table_to_docx
 
 if __name__ == "__main__":
 

@@ -4,11 +4,11 @@ from pathlib import Path
 import spacy
 
 text = "The patient has experienced increasing suicidal thoughts"
-nlp = spacy.load("en_core_web_sm")
+#nlp = spacy.load("en_core_web_sm")
 
-doc = nlp(text)
+#doc = nlp(text)
 
-spacy.displacy.render(doc, style="dep")
+#spacy.displacy.render(doc, style="dep")
 
 
 ex = {

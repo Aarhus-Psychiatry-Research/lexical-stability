@@ -5,7 +5,7 @@ from typing import List, Union
 import numpy as np
 import pandas as pd
 
-from utils.infodynamics import InfoDynamics, jsd
+from lexicalstability.utils.infodynamics import InfoDynamics, jsd
 
 
 def load_dataframe(path: str) -> pd.DataFrame:
