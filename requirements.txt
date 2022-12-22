@@ -3,6 +3,7 @@ python-docx
 numpy
 wasabi
 psycopmlutils
-spacy
-textdescriptives
-yaml
+# spacy
+# textdescriptives
+pyyaml
+# dacy>2.0

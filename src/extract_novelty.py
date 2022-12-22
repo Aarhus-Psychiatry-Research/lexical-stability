@@ -5,6 +5,7 @@ from typing import List, Union
 import numpy as np
 import pandas as pd
 
+from constants import ENTROPY_SAVE_DIR, GROUPED_KW_SAVE_DIR
 from utils.infodynamics import InfoDynamics, jsd
 
 
@@ -33,33 +34,33 @@ def extract_novelty_resonance(
 
 if __name__ == "__main__":
 
-    BASE_SAVE_DIR = Path(
-        "\\\\TSCLIENT\\P\\LASHA601\\documentLibrary\\lexical-dynamics-data"
-    )
-    GROUPED_KW_SAVE_DIR = BASE_SAVE_DIR / "kw_counts_per_group"
-    ENTROPY_SAVE_DIR = BASE_SAVE_DIR / "entropy"
-    if not ENTROPY_SAVE_DIR.exists():
-        ENTROPY_SAVE_DIR.mkdir()
+    ENTROPY_SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
-    AGG_LEVEL = "quarterly"
+    AGG_LEVEL = ["quarterly", "yearly"]
 
     WINDOW_SIZE = [2]
 
-    files = list(p for p in Path(GROUPED_KW_SAVE_DIR).iterdir())
-    # only run extraction on files maching the aggregation level
-    files = filter(lambda f: AGG_LEVEL in f.name, files)
+    for agg_level in AGG_LEVEL:
+        files = list(p for p in Path(GROUPED_KW_SAVE_DIR).iterdir())
+        # only run extraction on files maching the aggregation level
+        files = filter(lambda f: agg_level in f.name, files)
 
-    for file in files:
-        df = load_dataframe(file)
-        df = df.sort_values(["year", "date"])
-        # exclude anything before 2013
-        df = df[df["year"] >= 2013]
-        df = df.set_index(["year", "date"])
-        theta = df.to_numpy()
-        for window in WINDOW_SIZE:
-            df = extract_novelty_resonance(
-                df, theta=theta, dates=range(len(df)), window=window
-            )
-            filename = f"entropy_{AGG_LEVEL}_window_{window}_" + file.name
-            filename = ENTROPY_SAVE_DIR / filename
-            df.to_csv(filename)
+        for file in files:
+            df = load_dataframe(file)
+            if agg_level == "yearly":
+                # to make further processing easier, we add a date column that
+                # matches the quarter column
+                df["date"] = 1
+            sort_by = ["year", "date"]
+            df = df.sort_values(sort_by)
+            # exclude anything before 2013
+            df = df[df["year"] >= 2013]
+            df = df.set_index(sort_by)
+            theta = df.to_numpy()
+            for window in WINDOW_SIZE:
+                df = extract_novelty_resonance(
+                    df, theta=theta, dates=range(len(df)), window=window
+                )
+                filename = f"entropy_{agg_level}_window_{window}_" + file.name
+                filename = ENTROPY_SAVE_DIR / filename
+                df.to_csv(filename)

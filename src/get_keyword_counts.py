@@ -8,7 +8,9 @@ from typing import Dict, Generator, List, Set, Tuple
 import numpy as np
 import pandas as pd
 import yaml
-from psycopmlutils.loaders.raw.sql_load import sql_load
+from psycopmlutils.sql.loader import sql_load
+
+from constants import EXTRACTED_KW_SAVE_PATH, GROUPED_KW_SAVE_DIR, NOVELTY_STATS_DIR
 
 
 def load_keywords(path: str) -> Dict[str, str]:
@@ -122,10 +124,12 @@ def tally_counts(df: pd.DataFrame, date_col: str, bin_size: str) -> pd.DataFrame
     df["year"] = df[date_col].dt.year
     if bin_size == "weekly":
         df = df.groupby([df["year"], df[date_col].dt.isocalendar().week])
-    if bin_size == "monthly":
+    elif bin_size == "monthly":
         df = df.groupby([df["year"], df[date_col].dt.month])
-    if bin_size == "quarterly":
+    elif bin_size == "quarterly":
         df = df.groupby([df["year"], df[date_col].dt.quarter])
+    elif bin_size == "yearly":
+        df = df.groupby([df["year"]])
 
     df = df.agg(["sum"], axis="columns")
     df.columns = df.columns.droplevel(1)
@@ -157,7 +161,7 @@ def get_sparse_columns(
     )
     print(f"Excluded keywords: {excluded.index.tolist()}")
     excluded.to_csv(
-        BASE_SAVE_DIR
+        NOVELTY_STATS_DIR
         / f"excluded_keywords_{agg_level}_min_counts_{min_counts}_min_n_{min_n_with_min_counts}.csv",
         index=False,
     )
@@ -167,17 +171,12 @@ def get_sparse_columns(
 if __name__ == "__main__":
     # set variables
     RUN_KEYWORD_EXTRACTION = False
-    BASE_SAVE_DIR = Path(
-        "\\\\TSCLIENT\\P\\LASHA601\\documentLibrary\\lexical-dynamics-data"
-    )
+
     KW_PATH = Path.cwd() / "data" / "keywords.yaml"
 
-    EXTRACTED_KW_SAVE_PATH = BASE_SAVE_DIR / "keyword_counts.pkl"
-    GROUPED_KW_SAVE_DIR = BASE_SAVE_DIR / "kw_counts_per_group"
-    if not GROUPED_KW_SAVE_DIR.exists():
-        GROUPED_KW_SAVE_DIR.mkdir(parents=True)
+    GROUPED_KW_SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
-    AGGREGATION_LEVELS = ["quarterly"]
+    AGGREGATION_LEVELS = ["quarterly", "yearly"]
     MIN_COUNTS = 10
     MIN_OCCURENCES = 5
     LOG_COUNTS = False
@@ -228,7 +227,6 @@ if __name__ == "__main__":
         sparse_cols = get_sparse_columns(
             agg_counts,
             min_counts=MIN_COUNTS,
-            # has to be minimum MIN_COUNTS in a third of the timesteps
             min_n_with_min_counts=MIN_OCCURENCES,
         )
         agg_counts = agg_counts.drop(sparse_cols, axis=1)

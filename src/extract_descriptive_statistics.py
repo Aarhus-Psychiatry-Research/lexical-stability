@@ -6,12 +6,16 @@ import time
 from pathlib import Path
 from typing import Generator, Tuple
 
+import dacy
 import numpy as np
 import pandas as pd
 import spacy
 import textdescriptives as td
-from psycopmlutils.loaders.raw.sql_load import sql_load
+
+# from psycopmlutils.sql.loader import sql_load
 from spacy.tokens import Doc
+
+from constants import DESCRIPTIVE_STATS_DIR, sql_load
 
 
 def yield_text(df_gen: Generator[pd.DataFrame, None, None]) -> Tuple[str, Tuple[str]]:
@@ -101,8 +105,6 @@ if __name__ == "__main__":
     VIEW = "[FOR_SFI_fritekst_resultat_udfoert_i_psykiatrien_aendret_"
     SCHEMA = "fct"
     SQL = f"SELECT * FROM [{SCHEMA}]."
-    # save path
-    BASE_SAVE_DIR = "\\\\TSCLIENT\\P\\LASHA601\\documentLibrary\\lexical-dynamics-data\\descriptive_stats"
 
     SAMPLE_PROP = 0.1
     CHUNKSIZE = 10000
@@ -110,19 +112,28 @@ if __name__ == "__main__":
     SERVER = "BI-DPA-PROD"
     DATABASE = "USR_PS_FORSK"
 
-    nlp = spacy.load("da_core_news_lg")
-    nlp.add_pipe("textdescriptives")
+    spacy.require_gpu()
+    nlp = dacy.load("large")
+    # nlp = spacy.load("da_core_news_lg")
+    nlp.add_pipe("textdescriptives/readability")
+    nlp.add_pipe("textdescriptives/dependency_distance")
 
     for year in years:
         print(f"[INFO] Starting year {year}...")
         view = VIEW + year + "_inkl_2021]"
         sql = SQL + view
 
-        save_dir = Path(BASE_SAVE_DIR, year)
-        if not save_dir.exists():
-            save_dir.mkdir()
+        save_dir = Path(DESCRIPTIVE_STATS_DIR, year)
+        save_dir.mkdir(parents=True, exist_ok=True)
+
         # Get generator of data
-        df_gen = sql_load(sql, SERVER, DATABASE, chunksize=CHUNKSIZE)
+        df_gen = sql_load(
+            sql,
+            SERVER,
+            DATABASE,
+            chunksize=CHUNKSIZE,
+            format_timestamp_cols_to_datetime=False,
+        )
         print("[INFO] Fetched data...")
         # Establish connection database to store results
         # dbcon = sqlBI.Connection(SERVER, DATABASE)

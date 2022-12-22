@@ -47,6 +47,9 @@ def summarize_scores(
     elif bin_size == "quarterly":
         df_total = df.drop("overskrift", axis=1).groupby(df[date_col].dt.quarter)
         df = df.groupby(by=[df[date_col].dt.quarter, "overskrift"])
+    elif bin_size == "yearly":
+        df_total = df.drop("overskrift", axis=1).groupby(df[date_col].dt.year)
+        df = df.groupby(by=[df[date_col].dt.year, "overskrift"])
 
     aggregations = ["mean", "std", "count", se]
 
@@ -60,6 +63,8 @@ def summarize_scores(
 
 
 if __name__ == "__main__":
+
+    bins = ["quarterly", "yearly"]
 
     folders = list(p for p in Path(BASE_DIR).iterdir())
 
